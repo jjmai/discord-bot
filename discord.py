@@ -6,6 +6,8 @@ import os
 import json
 import requests
 import random
+import webbrowser
+import urllib.parse, urllib.request, re
 
 import youtube_dl
 
@@ -21,6 +23,8 @@ ydl_opts ={
 }
 
 client = commands.Bot(command_prefix = ".")
+
+list_queue ={}
 
 list_quote = ['Mom, Dad, I Love You. Please Don’t Sell Me To Paris Hilton.',
               'My Name Is Butters. I’m Eight Years Old, I’m Blood Type O, And I’m Bi-Curious.',
@@ -58,6 +62,18 @@ async def join(ctx):
   #  await voice_client.disconnect()
 
 @client.command()
+async def youtube(ctx,*,search):
+    query_string = urllib.parse.urlencode({
+        'search_query': search
+    })
+    htm_content = urllib.request.urlopen(
+        'http://www.youtube.com/results?' + query_string
+    )
+    search_results = re.findall(r'/watch\?v=(.{11})',htm_content.read().decode())
+    await ctx.send('http://www.youtube.com/watch?v=' + search_results[0])
+
+#play youtube song
+@client.command()
 async def play(ctx, url:str):
     song_there = os.path.isfile("song.mp3")
     try:
@@ -70,19 +86,42 @@ async def play(ctx, url:str):
     await voice_channel.connect()
     voice = discord.utils.get(client.voice_clients,guild=ctx.guild)
 
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([url])
-    for file in os.listdir("./"):
-        if file.endswith(".mp3"):
-            os.rename(file,"song.mp3")
-    voice.play(discord.FFmpegPCMAudio("song.mp3"))
+    if url.startswith("http"):
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+        for file in os.listdir("./"):
+            if file.endswith(".mp3") and not (file.startswith("donnie") or file.startswith("lululu")):
+                os.rename(file, "song.mp3")
+        voice.play(discord.FFmpegPCMAudio("song.mp3"))
+    else:
+        query_string = urllib.parse.urlencode({
+            'search_query': url
+        })
+        htm_content = urllib.request.urlopen(
+            'http://www.youtube.com/results?' + query_string
+        )
+        search_results = re.findall(r'/watch\?v=(.{11})', htm_content.read().decode())
+        await ctx.send('http://www.youtube.com/watch?v=' + search_results[0])
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([search_results])
+        for file in os.listdir("./"):
+            if file.endswith(".mp3"):
+                os.rename(file, "song.mp3")
+        voice.play(discord.FFmpegPCMAudio("song.mp3"))
 
+
+#specifically plays looloo
 @client.command()
 async def looloo(ctx):
     voice_channel = discord.utils.get(ctx.guild.voice_channels,name ='Losers')
     voice = discord.utils.get(client.voice_clients,guild=ctx.guild)
     voice.play(discord.FFmpegPCMAudio("lululu.mp3"))
 
+@client.command()
+async def donnie(ctx):
+    voice_channel = discord.utils.get(ctx.guild.voice_channels, name='Losers')
+    voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
+    voice.play(discord.FFmpegPCMAudio("donnie.mp3"))
 
 @client.command()
 async def leave(ctx):
@@ -107,19 +146,24 @@ async def resume(ctx):
         voice.resume()
     else:
         await ctx.send("no audio paused")
+        
+@client.command()
+async def queue(ctx):
+    pass
 
 @client.command()
 async def say(ctx):
     quote = get_quote()
     await ctx.send(quote)
 
+#marks a target
 @client.command()
 async def mark(ctx,message:str):
     global target
     target = message
     print(target)
 
-
+#interrupt
 @client.event
 async def on_voice_state_update(member, prev, cur):
     user = f"{member.name}#{member.discriminator}"
@@ -152,4 +196,4 @@ async def move(ctx,prev,cur):
         await author.move_to(channel)
         print("moved")
 
-client.run('ODQ1NDQ4MTI1NjgxMzY5MTM4.YKhG7A.Kz8SvUcS0FTk-PrmeZe7giBWH1s')
+client.run('ODQ1NDQ4MTI1NjgxMzY5MTM4.YKhG7A.nZWqHkEszcbN_y2MrYD3jIBnhYQ')
