@@ -25,6 +25,7 @@ ydl_opts ={
 client = commands.Bot(command_prefix = ".")
 
 list_queue ={}
+list_count=0
 
 list_quote = ['Mom, Dad, I Love You. Please Don’t Sell Me To Paris Hilton.',
               'My Name Is Butters. I’m Eight Years Old, I’m Blood Type O, And I’m Bi-Curious.',
@@ -82,9 +83,10 @@ async def play(ctx, url:str):
     except PermissionError:
         await ctx.send("wait")
 
-    voice_channel = discord.utils.get(ctx.guild.voice_channels,name ='Losers')
-    await voice_channel.connect()
-    voice = discord.utils.get(client.voice_clients,guild=ctx.guild)
+    if not ctx.voice_client:
+        voice_channel = discord.utils.get(ctx.guild.voice_channels,name ='Losers')
+        await voice_channel.connect()
+        voice = discord.utils.get(client.voice_clients,guild=ctx.guild)
 
     if url.startswith("http"):
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
@@ -101,11 +103,12 @@ async def play(ctx, url:str):
             'http://www.youtube.com/results?' + query_string
         )
         search_results = re.findall(r'/watch\?v=(.{11})', htm_content.read().decode())
-        await ctx.send('http://www.youtube.com/watch?v=' + search_results[0])
+        url = 'http://www.youtube.com/watch?v=' + search_results[0]
+        await ctx.send(url)
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([search_results])
+            ydl.download([url])
         for file in os.listdir("./"):
-            if file.endswith(".mp3"):
+            if file.endswith(".mp3") and not (file.startswith("donnie") or file.startswith("lululu")):
                 os.rename(file, "song.mp3")
         voice.play(discord.FFmpegPCMAudio("song.mp3"))
 
@@ -113,9 +116,12 @@ async def play(ctx, url:str):
 #specifically plays looloo
 @client.command()
 async def looloo(ctx):
-    voice_channel = discord.utils.get(ctx.guild.voice_channels,name ='Losers')
-    voice = discord.utils.get(client.voice_clients,guild=ctx.guild)
-    voice.play(discord.FFmpegPCMAudio("lululu.mp3"))
+    try:
+        voice_channel = discord.utils.get(ctx.guild.voice_channels,name ='Losers')
+        voice = discord.utils.get(client.voice_clients,guild=ctx.guild)
+        voice.play(discord.FFmpegPCMAudio("lululu.mp3"))
+    except PermissionError:
+        await ctx.send("Butters is not in a channel yet!")
 
 @client.command()
 async def donnie(ctx):
@@ -146,10 +152,18 @@ async def resume(ctx):
         voice.resume()
     else:
         await ctx.send("no audio paused")
-        
+
+@client.command()
+async def skip(ctx):
+    voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
+    if ctx.voice_client:
+        voice.stop()
+
 @client.command()
 async def queue(ctx):
-    pass
+    if ctx.voice_client:
+        for i in range(0,list_count):
+            print(i,":" , list_queue[i])
 
 @client.command()
 async def say(ctx):
@@ -196,4 +210,4 @@ async def move(ctx,prev,cur):
         await author.move_to(channel)
         print("moved")
 
-client.run('ODQ1NDQ4MTI1NjgxMzY5MTM4.YKhG7A.nZWqHkEszcbN_y2MrYD3jIBnhYQ')
+#client.run('ODQ1NDQ4MTI1NjgxMzY5MTM4.YKhG7A.kt8D8aoi5IAqTjkHfXI35cqsAbQ')
